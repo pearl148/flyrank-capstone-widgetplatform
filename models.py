@@ -17,9 +17,9 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class WidgetType(str, Enum):
-    SignUp_Form = "sign up form"
+    SignUp_Form = "signup_form"
     CTA = "cta"
-    Popup = "popup"
+    Popover = "popover"
 
 
 class Widget(SQLModel, table = True):
