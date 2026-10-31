@@ -444,13 +444,184 @@ access-control-allow-origin: *
 
 {"detail":"Payload too large"}
 ```
+###Cross-origin submissions
+**Proves:** A visitor on a different origin submits via the widget; the browser preflight is answered and the row is stored for the right tenant
+
+```bash
+curl -i -X OPTIONS http://localhost:8000/submissions \ons \
+  -H "Origin: http://localhost:5500" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type"
+```
+```
+HTTP/1.1 200 OK
+date: Mon, 26 Oct 2026 11:11:19 GMT
+server: uvicorn
+access-control-allow-origin: *
+access-control-allow-methods: GET, POST, OPTIONS
+access-control-max-age: 600
+access-control-allow-headers: Accept, Accept-Language, Content-Language, Content-Type
+content-length: 2
+content-type: text/plain; charset=utf-8
+```
+```bash
+sqlite3 app.db "select id, widget_id, tenant_id, data from submission order by id desc limit 1;"
+```
+```
+4|1|1|{"fullName": "abhi verma", "email": "abv@gmail.com", "password": "abv@!@", "age": "18"}
+```
 
 
 ## Abuse protection
-_(todo)_
+**Proves:** Per-IP rate limiting rejects a burst with 429 and a Retry-After header, other endpoints stay available, and normal traffic is accepted again after the window.
+
+```bash
+for i in $(seq 1 15); do   curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:8000/submissions     -H "Content-Type: application/json"     -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'; done | sort | uniq -c
+```
+```
+  10 201
+  5 429
+```
+## this shows that it has header that says when it crosses the rate-limit when to retry after how many seconds
+```bash
+ curl -i -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:5500" \
+  -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'
+HTTP/1.1 429 Too Many Requests
+date: Thu, 29 Oct 2026 11:29:29 GMT
+server: uvicorn
+retry-after: 56
+content-length: 55
+content-type: application/json
+access-control-allow-origin: *
+
+{"detail":"Too many requests. Please try again later."}
+```
+
+## other endpoints stay available
+```bash
+curl -i http://localhost:curl -i http://localhost:8000/health
+HTTP/1.1 200 OK
+date: Thu, 29 Oct 2026 11:29:52 GMT
+server: uvicorn
+content-length: 15
+content-type: application/json
+```
+```
+{"status":"ok"}
+```
+```bash
+curl -i http://localhost:8000/widgets/4N-QbyjARpw/configQbyjARpw/config
+HTTP/1.1 200 OK
+date: Thu, 29 Oct 2026 11:30:02 GMT
+server: uvicorn
+content-length: 490
+content-type: application/json
+cache-control: public, max-age=60
+```
+```
+{"public_id":"4N-QbyjARpw","type":"signup_form","title":"Create Your Account","description":"Join our platform by filling out your details below.","fields":{"fullName":{"label":"Full Name","type":"text","required":true},"email":{"label":"Email Address","type":"email","required":true},"password":{"label":"Password","type":"password","required":true},"age":{"label":"Age (Optional)","type":"number","required":false}},"button_text":"Sign Up","display_options":{"theme":"light"},"version":1}
+```
+**Proves:**That the honeypot is working it gives a normal message like it gives to every valid submission but it is never stored in the database
+```bash
+sqlite3 app.db "select count(*) from submission;"
+```
+```
+24
+```
+
+```bash
+curl -i -X POST http://localhost:8000/submissions -H "Content-Type: application/json" \
+  -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"},"website":"http://spam.example"}'
+```
+```
+HTTP/1.1 201 Created
+date: Thu, 29 Oct 2026 11:26:28 GMT
+server: uvicorn
+content-length: 39
+content-type: application/json
+
+{"id":0,"status":"Successfully Stored"}
+```
+
+```bash
+sqlite3 app.db "select count(*) from submission;"
+```
+```
+24
+```
+
 
 ## Enrichment & safe side effects
-_(todo)_
+“Geo providers are mocked by tools/mock_geo.py on port 9001; POST /toggle/{a|b}/{up|down} switches each one.”
+
+### Provider A answers first when healthy
+
+**Proves:** with both mock providers up, a submission is enriched by provider A (stored country `MockLand-A`, city `Alpha City`) and provider B is never needed.
+
+```bash
+curl -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" \
+  -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'
+sqlite3 app.db "select id, country, city from submission order by id desc limit 1;"
+```
+```
+{"id":36,"status":"stored"}36|MockLand-A|Alpha City
+```
+
+
+### Fallback chain: provider A down, provider B answers
+
+**Proves:** with provider A returning 503, the submission still returns 201 and is enriched by provider B (stored country `MockLand-B`, city `Beta City`). The API log shows the provider A failure.
+
+```bash
+curl -X POST http://localhost:9001/toggle/a/down
+curl -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" \
+  -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'
+sqlite3 app.db "select id, country, city from submission order by id desc limit 1;"
+```
+```
+{"a":true,"b":false}{"id":37,"status":"stored"}37|MockLand-B|Beta City
+```
+
+### Degrade, never fail: all providers down
+
+**Proves:** with both providers returning 503, `POST /submissions` still returns 201 and the row is stored with NULL country and city. The log shows both providers were tried and failed.
+
+```bash
+curl -X POST http://localhost:9001/toggle/b/down
+curl -i -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" \
+  -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'
+sqlite3 app.db "select id, country, city from submission order by id desc limit 1;"
+```
+```
+{"a":true,"b":true}HTTP/1.1 201 Created
+date: Sat, 31 Oct 2026 07:25:34 GMT
+server: uvicorn
+content-length: 27
+content-type: application/json
+
+{"id":38,"status":"stored"}38||
+127.0.0.1:46744 - "GET /a/json/8.8.8.8?fields=status,country,city HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:46758 - "GET /b/8.8.8.8/json/ HTTP/1.1" 503 Service Unavailable
+```
+### Provider unreachable (connection refused)
+
+**Proves:** with the geo service not running at all, the submission still returns 201 and is stored without geo data, so a dead network connection is handled the same way as an error response.
+```bash
+curl -i -X POST http://localhost:8000/submissions   -H "Content-Type: application/json"   -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'
+HTTP/1.1 201 Created
+date: Sat, 31 Oct 2026 07:43:39 GMT
+server: uvicorn
+content-length: 27
+content-type: application/json
+```
+```
+{"id":39,"status":"stored"}
+```
 
 ## Documentation
 _(todo)_
