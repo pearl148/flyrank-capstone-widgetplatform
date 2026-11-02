@@ -7,6 +7,8 @@ from validation import validate_submission_data
 from ratelimit import ip_limiter, widget_limiter   
 import os 
 from geo import enrich   
+from fastapi import BackgroundTasks
+from notifications import send_confirmation
 
 router = APIRouter(tags=["submissions"])
 
@@ -16,7 +18,7 @@ class SubmissionCreate(BaseModel):
     website: str | None = None                          # new: honeypot field
 
 @router.post("/submissions", status_code=201)
-def create_submission(body: SubmissionCreate, request: Request, session: Session = Depends(get_session)):
+def create_submission(body: SubmissionCreate, request: Request, session: Session = Depends(get_session), background_tasks: BackgroundTasks = BackgroundTasks()):
     ip = request.client.host if request.client else "unknown"
   
 
@@ -66,4 +68,8 @@ def create_submission(body: SubmissionCreate, request: Request, session: Session
     session.add(submission)
     session.commit()
     session.refresh(submission)
+    # find the widget's email field
+    email_field = next((n for n, r in widget.fields.items() if r.get("type") == "email"), None)
+    if email_field and cleaned.get(email_field):
+        background_tasks.add_task(send_confirmation, submission.id, cleaned[email_field], widget.title)
     return {"id": submission.id, "status": submission.status}

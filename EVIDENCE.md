@@ -622,6 +622,27 @@ content-type: application/json
 ```
 {"id":39,"status":"stored"}
 ```
+## Sending email to the visitor after submission
+ **Proves:** With the email sender forced to fail, POST /submissions still returns 201 immediately and the row is stored; the failure is retried 3 times with backoff and an ALERT line is logged.
+
+```bash
+curl -s -o /dev/null -w "%{http_code} in %{time_total}s\n" -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" \
+  -d '{"widget_id":"4N-QbyjARpw","data":{"fullName":"A B","email":"a@b.com","password":"secret123"}}'
+sqlite3 app.db "select id, data, status from submission order by id desc limit 1;"
+
+```
+```
+201 in 0.223195s
+42|{"fullName": "A B", "email": "a@b.com", "password": "secret123"}|Stored
+
+INFO:     127.0.0.1:43938 - "POST /submissions HTTP/1.1" 201 Created
+WARNING:notifications:Email attempt 1/3 for submission 42 failed: forced email failure
+WARNING:notifications:Email attempt 2/3 for submission 42 failed: forced email failure
+WARNING:notifications:Email attempt 3/3 for submission 42 failed: forced email failure
+ERROR:notifications:ALERT: confirmation email for submission 42 failed after 3 attempts
+
+```
 
 ## Documentation
 _(todo)_

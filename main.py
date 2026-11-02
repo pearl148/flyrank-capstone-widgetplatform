@@ -8,6 +8,8 @@ from submissions import router as submissions_router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request
 from fastapi.responses import JSONResponse
+import logging
+logging.basicConfig(level=logging.INFO)
 
 
 
