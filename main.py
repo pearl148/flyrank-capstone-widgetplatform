@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_db_and_tables()   
+    #create_db_and_tables()   
     yield                    
 
 app = FastAPI(lifespan=lifespan)
