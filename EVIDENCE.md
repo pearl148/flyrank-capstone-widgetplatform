@@ -644,5 +644,733 @@ ERROR:notifications:ALERT: confirmation email for submission 42 failed after 3 a
 
 ```
 
+## Owner Dashboard
+
+**Proves:**A submission made from the second-origin test page is visible in the owner’s dashboard API.
+Dashboard queries are tenant-scoped: tenant B sees none of tenant A’s submissions, and filtering by tenant A’s widget returns 404.
+Stats endpoint returns counts by day, by widget and by country, with unknown geo grouped as ‘Unknown’.
+Pagination limits are enforced: limit=1000 returns 422.
+
+```bash
+# 1. A sees only A's rows (newest first, with total)
+curl -s "$BASE/dashboard/submissions" -H "Authorization: Bearer $TOKEN_A" | python -m json.tool
+
+# 2. B sees only B's single row
+curl -s "$BASE/dashboard/submissions" -H "Authorization: Bearer $TOKEN_B" | python -m json.tool
+
+# 3. B asks for A's widget: expect 404
+curl -i "$BASE/dashboard/submissions?widget=$PUBLIC_A" -H "Authorization: Bearer $TOKEN_B"
+
+# 4. A filtered to its own widget
+curl -s "$BASE/dashboard/submissions?widget=$PUBLIC_A" -H "Authorization: Bearer $TOKEN_A" | python -m json.tool
+
+# 5. pagination: one row, second page. "total" stays the same
+curl -s "$BASE/dashboard/submissions?limit=1&offset=1" -H "Authorization: Bearer $TOKEN_A" | python -m json.tool
+
+# 6. limit too large: expect 422
+curl -i "$BASE/dashboard/submissions?limit=1000" -H "Authorization: Bearer $TOKEN_A"
+
+# 7. no token: expect 401 or 403
+curl -i "$BASE/dashboard/submissions"
+
+# 8. stats for each tenant (the numbers should differ)
+curl -s "$BASE/dashboard/stats" -H "Authorization: Bearer $TOKEN_A" | python -m json.tool
+curl -s "$BASE/dashboard/stats" -H "Authorization: Bearer $TOKEN_B" | python -m json.tool
+
+# 9. stats over a short window
+curl -s "$BASE/dashboard/stats?days=1" -H "Authorization: Bearer $TOKEN_A" | python -m json.tool
+```
+```
+{
+    "total": 42,
+    "limit": 20,
+    "offset": 0,
+    "items": [
+        {
+            "id": 42,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T11:36:26.956944"
+        },
+        {
+            "id": 41,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T09:22:27.038766"
+        },
+        {
+            "id": 40,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T09:22:03.011969"
+        },
+        {
+            "id": 39,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-31T07:43:40.193540"
+        },
+        {
+            "id": 38,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-31T07:25:35.378642"
+        },
+        {
+            "id": 37,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": "MockLand-B",
+            "city": "Beta City",
+            "created_at": "2026-10-31T07:25:09.266083"
+        },
+        {
+            "id": 36,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": "MockLand-A",
+            "city": "Alpha City",
+            "created_at": "2026-10-31T07:22:43.875829"
+        },
+        {
+            "id": 35,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": "MockLand-A",
+            "city": "Alpha City",
+            "created_at": "2026-10-31T07:07:12.827357"
+        },
+        {
+            "id": 34,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.184024"
+        },
+        {
+            "id": 33,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.163232"
+        },
+        {
+            "id": 32,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.143844"
+        },
+        {
+            "id": 31,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.124114"
+        },
+        {
+            "id": 30,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.105064"
+        },
+        {
+            "id": 29,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.086207"
+        },
+        {
+            "id": 28,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.065926"
+        },
+        {
+            "id": 27,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.045860"
+        },
+        {
+            "id": 26,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.016617"
+        },
+        {
+            "id": 25,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:25.969177"
+        },
+        {
+            "id": 24,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:21:47.990931"
+        },
+        {
+            "id": 23,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:21:47.969589"
+        }
+    ]
+}
+{
+    "total": 1,
+    "limit": 20,
+    "offset": 0,
+    "items": [
+        {
+            "id": 43,
+            "widget_public_id": "wbvBUtqOc6Y",
+            "widget_title": "B widget",
+            "data": {
+                "fullName": "Bee Visitor",
+                "email": "bee@example.com"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-03T11:55:16.637221"
+        }
+    ]
+}
+HTTP/1.1 404 Not Found
+date: Tue, 03 Nov 2026 12:06:43 GMT
+server: uvicorn
+content-length: 29
+content-type: application/json
+
+{"detail":"Widget not found"}{
+    "total": 42,
+    "limit": 20,
+    "offset": 0,
+    "items": [
+        {
+            "id": 42,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T11:36:26.956944"
+        },
+        {
+            "id": 41,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T09:22:27.038766"
+        },
+        {
+            "id": 40,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T09:22:03.011969"
+        },
+        {
+            "id": 39,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-31T07:43:40.193540"
+        },
+        {
+            "id": 38,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-31T07:25:35.378642"
+        },
+        {
+            "id": 37,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": "MockLand-B",
+            "city": "Beta City",
+            "created_at": "2026-10-31T07:25:09.266083"
+        },
+        {
+            "id": 36,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": "MockLand-A",
+            "city": "Alpha City",
+            "created_at": "2026-10-31T07:22:43.875829"
+        },
+        {
+            "id": 35,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": "MockLand-A",
+            "city": "Alpha City",
+            "created_at": "2026-10-31T07:07:12.827357"
+        },
+        {
+            "id": 34,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.184024"
+        },
+        {
+            "id": 33,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.163232"
+        },
+        {
+            "id": 32,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.143844"
+        },
+        {
+            "id": 31,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.124114"
+        },
+        {
+            "id": 30,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.105064"
+        },
+        {
+            "id": 29,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.086207"
+        },
+        {
+            "id": 28,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.065926"
+        },
+        {
+            "id": 27,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.045860"
+        },
+        {
+            "id": 26,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:26.016617"
+        },
+        {
+            "id": 25,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:29:25.969177"
+        },
+        {
+            "id": 24,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:21:47.990931"
+        },
+        {
+            "id": 23,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-10-29T11:21:47.969589"
+        }
+    ]
+}
+{
+    "total": 42,
+    "limit": 1,
+    "offset": 1,
+    "items": [
+        {
+            "id": 41,
+            "widget_public_id": "4N-QbyjARpw",
+            "widget_title": "Create Your Account",
+            "data": {
+                "fullName": "A B",
+                "email": "a@b.com",
+                "password": "secret123"
+            },
+            "country": null,
+            "city": null,
+            "created_at": "2026-11-02T09:22:27.038766"
+        }
+    ]
+}
+HTTP/1.1 422 Unprocessable Content
+date: Tue, 03 Nov 2026 12:06:44 GMT
+server: uvicorn
+content-length: 145
+content-type: application/json
+
+{"detail":[{"type":"less_than_equal","loc":["query","limit"],"msg":"Input should be less than or equal to 100","input":"1000","ctx":{"le":100}}]}HTTP/1.1 401 Unauthorized
+date: Tue, 03 Nov 2026 12:06:44 GMT
+server: uvicorn
+www-authenticate: Bearer
+content-length: 30
+content-type: application/json
+
+{"detail":"Not authenticated"}{
+    "days": 30,
+    "total": 42,
+    "by_day": [
+        {
+            "day": "2026-10-23",
+            "count": 2
+        },
+        {
+            "day": "2026-10-26",
+            "count": 2
+        },
+        {
+            "day": "2026-10-28",
+            "count": 10
+        },
+        {
+            "day": "2026-10-29",
+            "count": 20
+        },
+        {
+            "day": "2026-10-31",
+            "count": 5
+        },
+        {
+            "day": "2026-11-02",
+            "count": 3
+        }
+    ],
+    "by_widget": [
+        {
+            "widget_public_id": "4N-QbyjARpw",
+            "title": "Create Your Account",
+            "count": 42
+        }
+    ],
+    "by_country": [
+        {
+            "country": "Unknown",
+            "count": 39
+        },
+        {
+            "country": "MockLand-A",
+            "count": 2
+        },
+        {
+            "country": "MockLand-B",
+            "count": 1
+        }
+    ]
+}
+{
+    "days": 30,
+    "total": 1,
+    "by_day": [
+        {
+            "day": "2026-11-03",
+            "count": 1
+        }
+    ],
+    "by_widget": [
+        {
+            "widget_public_id": "wbvBUtqOc6Y",
+            "title": "B widget",
+            "count": 1
+        }
+    ],
+    "by_country": [
+        {
+            "country": "Unknown",
+            "count": 1
+        }
+    ]
+}
+{
+    "days": 1,
+    "total": 0,
+    "by_day": [],
+    "by_widget": [],
+    "by_country": []
+}
+
+```
+
+```bash
+curl -s "$BASE/dashboard/stats" -H "Authorization: Bearer $TOKEN_A" | python -c "
+import sys, json
+s = json.load(sys.stdin)
+print('total      :', s['total'])
+print('by_widget  :', sum(w['count'] for w in s['by_widget']))
+print('by_country :', sum(c['count'] for c in s['by_country']))
+"
+```
+```
+total      : 42
+by_widget  : 42
+by_country : 42
+```
 ## Documentation
 _(todo)_
+

@@ -5,6 +5,7 @@ from auth import router as auth_router
 from widgets import router as widgets_router
 from public import router as public_router
 from submissions import router as submissions_router
+from dashboard import router as dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -25,6 +26,7 @@ app.include_router(auth_router)
 app.include_router(widgets_router)
 app.include_router(public_router)
 app.include_router(submissions_router)
+app.include_router(dashboard_router)
 MAX_BODY_BYTES = 10_000
 
 @app.middleware("http")
